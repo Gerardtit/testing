@@ -12,5 +12,4 @@ Feature: CartSubstitution(v2)
   @regression @module_substitutionV2
   Scenario: Verify that single "Do not sub" option only applies to the specified/existing items in the cart not for global level
   Verify that if shopper taps "No" on Pop Over screen it closes the pop over and the app return to the cart/edit cart screen with the previously selected substitution preference applied
-
     Then validate 1 equals 1
