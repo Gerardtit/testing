@@ -1,5 +1,8 @@
 pipeline {
-    agent any 
+    agent any
+    triggers {
+        githubPush()
+    } 
     parameters {
         booleanParam (name: 'executeTests', defaultValue: true, description: '')
     }
@@ -24,9 +27,7 @@ pipeline {
                 script {
                     build job: 'ParallelRunner',
                     parameters: [
-                        [ $class: 'StringParameterValue', name: 'fromBuild', value: "${BUILD_NUMBER}"],
-                        [ $class: 'StringParameterValue', name: 'banner', value: 'Safeway'],
-                        [ $class: 'StringParameterValue', name: 'runners', value: '3'],
+                        [ $class: 'StringParameterValue', name: 'banner', value: 'safeway'],
                         [ $class: 'BooleanParameterValue', name: 'executeTests', value: true]
                     ]
                 }

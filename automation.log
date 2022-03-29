@@ -1,19 +1,10 @@
 pipeline {
     agent any 
     parameters {
-        string(name: 'fromBuild', defaultValue: '', description: 'Build')
-        string(name: 'banner', defaultValue: 'Safeway', description: 'Which banner will be tested')
-        choice(name: 'runners', choices: ['1', '2', '3', '4', '5'], description: 'Amount of runners for testing our application')
+        string(name: 'banner', defaultValue: 'safeway', description: 'Which banner will be tested')
         booleanParam (name: 'executeTests', defaultValue: true, description: '')
     }
     stages {
-        stage ("copy") {
-            steps {
-                echo 'Copying necessary files to test'
-                //sh 'cp repository'
-                //sh 'cp docker image'
-            }
-        }
         stage ("test execution") {
             when {
                 expression {
@@ -22,30 +13,71 @@ pipeline {
             }
             steps {
                 script {
-                    build job: 'RunnerAndroid',
-                    parameters: [
-                        [$class: 'StringParameterValue', name: 'suite', value: 'cart']
-                    ]
+                    parallel (
+                        runner1: {
+                                    build job: 'RunnerAndroid',
+                                    parameters: [
+                                        [$class: 'StringParameterValue', name: 'suite', value: 'src/test/resources/Mobile/gg_features/gg_cart_SCP.feature']
+                                    ]  
+                        },
+                        runner2: {
+                                    build job: 'RunnerAndroid',
+                                    parameters: [
+                                        [$class: 'StringParameterValue', name: 'suite', value: 'src/test/resources/Mobile/gg_features/gg_cart_substitutionV2.feature']
+                                    ]   
+                        },
+                        runner3: {
+                                    build job: 'RunnerAndroid',
+                                    parameters: [
+                                        [$class: 'StringParameterValue', name: 'suite', value: 'src/test/resources/Mobile/gg_features/gg_cart_global_substitutions.feature']
+                                    ]   
+                        }
+                     
+                    )
                 }
             }
         }
-    }
-    
+    } 
 }
 
 
 pipeline {
-    agent any 
+    agent {
+   node { 
+      label 'docker'
+   }
+} 
     parameters {
-        string(name: 'suite', defaultValue: 'Cart', description: 'Which will be executed')
+        string(name: 'suite', defaultValue: 'src/test/resources/Mobile/gg_features/gg_cart_SCP.feature', description: 'Which will be executed')
     }
     stages {
-        stage ("Run") {
+        stage ("Download Repository") {
             steps {
-                echo 'Copying necessary files to test'
-                //sh 'cp repository'
-                //sh 'cp docker image'
+                git branch: 'main', credentialsId: 'GitHub', url: 'https://github.com/Gerardtit/testing.git'
             }
+        }
+        stage ("Execute tests") {
+            steps {
+                
+                sh """
+                    docker run --privileged -d \
+                    -v \"${WORKSPACE}\":/root/repository/ \
+                    -v /home/gerard/Documents/Apps/:/root/repository/src/test/resources/Apps/android/qa2/ \
+                    -e DEVICE="Samsung Galaxy S10" \
+                    -e EMULATOR_ARGS="-wipe-data -partition-size 1024" \
+                    --name android\"${env.BUILD_NUMBER}\" test
+                """
+                sh 'sleep 45'
+                sh """    
+                docker exec android\"${env.BUILD_NUMBER}\" bash -c "cd repository && mvn test -Dtest=MobileRunner -Dbanner=safeway -DmobileDevice=emulator -DmobileEnv=qa2 -Dcucumber.features=\"${params.suite}\""
+                """
+                }
+        }
+    }
+        post {
+        always {
+            sh """docker kill android\"${env.BUILD_NUMBER}\" """
+            sh 'docker system prune -f || true'
         }
     }
 }
