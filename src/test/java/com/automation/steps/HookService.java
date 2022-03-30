@@ -15,7 +15,6 @@ import com.automation.mobile.manager.ThreadLocalManager;
 import com.automation.mobile.models.Feature;
 import com.automation.mobile.models.FeatureScenario;
 import com.automation.mobile.models.ScenarioStep;
-import com.automation.mobile.services.testrail.APIException;
 import com.automation.mobile.util.CommonUtil;
 import com.automation.mobile.util.ExecutionData;
 import com.automation.mobile.util.GlobalVar;
@@ -25,6 +24,7 @@ import io.appium.java_client.AppiumDriver;
 import io.cucumber.core.backend.TestCaseState;
 import io.cucumber.java.*;
 import io.cucumber.plugin.event.PickleStepTestStep;
+import io.cucumber.plugin.event.Result;
 import io.cucumber.plugin.event.TestCase;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.FilenameUtils;
@@ -35,6 +35,7 @@ import org.openqa.selenium.TakesScreenshot;
 
 import java.io.File;
 import java.io.IOException;
+import java.io.Serializable;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.net.URL;
@@ -42,10 +43,15 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.text.SimpleDateFormat;
-import java.util.Date;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.stream.Collectors;
+import testrail.APIClient;
+import testrail.APIException;
+import testrail.TestRailAccount;
+import org.apache.commons.lang3.ClassUtils;
+import org.apache.commons.lang3.reflect.FieldUtils;
+
+import static testrail.TestRailAccount.testRailApiClient;
 
 public class HookService {
     AppiumDevice appiumDevice = AppiumDeviceManager.getDevice();
@@ -53,9 +59,15 @@ public class HookService {
     GG_DashboardPage dashboardPage;
     PickleStepTestStep currentStep;
     int counter = 0;
+    private static APIClient client = null;
+    private static String runId = "1";
+    private static final int FAIL_STATE = 5;
+    private static final int SUCCESS_STATE = 1;
+    private static final String SUCCESS_COMMENT = "This test passed";
+    private static final String FAILED_COMMENT = "This test failed";
 
     @Before("@start_scenario")
-    public void before(Scenario scenario) throws IOException, APIException {
+    public void before(Scenario scenario) throws IOException, APIException, com.automation.mobile.services.testrail.APIException {
         System.out.println("**************hooks*********************" + Thread.currentThread().getId());
 
         if (appiumDevice == null) {
@@ -110,7 +122,7 @@ public class HookService {
         }
     }
 
-    public void setTestCaseData() throws IOException, APIException {
+    public void setTestCaseData() throws IOException, APIException, com.automation.mobile.services.testrail.APIException {
 
         String featureName = getFeatureName();
 
@@ -210,7 +222,77 @@ public class HookService {
     }
 
     @After
-    public void performStepsForScenarioSignInConsistency(Scenario desiredScenario) throws IOException, APIException {
+
+    public void tearDown(Scenario scenario) {
+        logResultToTestRail(scenario);
+    }
+    private void logResultToTestRail(Scenario scenario) {
+        String caseId = "";
+        System.out.println(scenario.getSourceTagNames());
+
+        for (String s : scenario.getSourceTagNames()) {
+            if (s.contains("TestRail" )) {
+
+                String[] res = s.split("(\\(.*?)" );
+
+                caseId = res[1].substring(0, res[1].length() - 1); // Removing the last parenthesis
+            }
+        }
+
+        Map<String, Serializable> data = new HashMap<>();
+
+        if (!scenario.isFailed()) {
+            data.put("status_id", SUCCESS_STATE);
+            data.put("comment", SUCCESS_COMMENT);
+
+        } else {
+            data.put("status_id", FAIL_STATE);
+            data.put("comment", logError(scenario));
+        }
+
+        if (!caseId.equals("" )) {
+            try {
+
+                if (System.getenv("runIdTestRail" ) != null && System.getenv("runTestRailId" ).equals("" )) {
+                    runId = System.getenv("runIdTestRail" );
+                }
+
+                client = testRailApiClient();
+                client.sendPost("add_result_for_case/" + runId + "/" + caseId, data);
+            } catch (IOException | APIException e) {
+                e.printStackTrace();
+            }
+        }
+    }
+
+    //   As per https://stackoverflow.com/a/58506614/6654475
+    private static String logError(Scenario scenario) {
+        try {
+            Class clasz = ClassUtils.getClass("cucumber.runtime.java.JavaHookDefinition$ScenarioAdaptor" );
+            Field fieldScenario = FieldUtils.getField(clasz, "scenario", true);
+            if (fieldScenario != null) {
+
+                fieldScenario.setAccessible(true);
+                Object objectScenario = fieldScenario.get(scenario);
+
+                Field fieldStepResults = objectScenario.getClass().getDeclaredField("stepResults" );
+                fieldStepResults.setAccessible(true);
+
+                ArrayList<Result> results = (ArrayList<Result>) fieldStepResults.get(objectScenario);
+                for (Result result : results) {
+                    if (result.getError() != null) {
+                        return FAILED_COMMENT + "\n" + result.getError().getMessage();
+                    }
+                }
+            }
+
+            return FAILED_COMMENT;
+
+        } catch (IllegalAccessException | NoSuchFieldException | ClassNotFoundException e) {
+            return FAILED_COMMENT;
+        }
+    }
+    public void performStepsForScenarioSignInConsistency(Scenario desiredScenario) throws IOException, APIException, com.automation.mobile.services.testrail.APIException {
         if (AppiumDriverManager.getDriver() != null) {
             if (desiredScenario.isFailed()) {
                 if (!desiredScenario.getSourceTagNames().toString().contains("@end_scenario")) {
