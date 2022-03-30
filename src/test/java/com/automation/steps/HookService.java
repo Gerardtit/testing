@@ -226,6 +226,7 @@ public class HookService {
     public void tearDown(Scenario scenario) {
         logResultToTestRail(scenario);
     }
+
     private void logResultToTestRail(Scenario scenario) {
         String caseId = "";
         System.out.println(scenario.getSourceTagNames());
