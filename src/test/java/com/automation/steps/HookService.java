@@ -254,8 +254,8 @@ public class HookService {
         if (!caseId.equals("" )) {
             try {
 
-                if (System.getenv("runIdTestRail" ) != null && System.getenv("runTestRailId" ).equals("" )) {
-                    runId = System.getenv("runIdTestRail" );
+                if (System.getProperty("runIdTestRail" ) != null && System.getProperty("runTestRailId" ).equals("" )) {
+                    runId = System.getProperty("runIdTestRail" );
                 }
 
                 client = testRailApiClient();

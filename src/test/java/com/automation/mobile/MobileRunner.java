@@ -108,7 +108,6 @@ public class MobileRunner {
         }
 
         testParameters.put("app", Arrays.asList("shop"));
-        testParameters.put("runIdTestRail", Arrays.asList(System.getenv(CommandArgument.ENVIRONMENT)));
         System.out.println(testParameters);
         return testParameters;
     }
