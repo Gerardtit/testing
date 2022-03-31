@@ -60,7 +60,7 @@ public class HookService {
     PickleStepTestStep currentStep;
     int counter = 0;
     private static APIClient client = null;
-    private static String runId = "1";
+    private static String runId = "";
     private static final int FAIL_STATE = 5;
     private static final int SUCCESS_STATE = 1;
     private static final String SUCCESS_COMMENT = "This test passed";
@@ -253,8 +253,6 @@ public class HookService {
 
         if (!caseId.equals("" )) {
             try {
-                System.out.println("Env: " + System.getenv("runIdTestRail"));
-                System.out.println("Prop: " +System.getProperty("runIdTestRail"));
 
                 if (System.getProperty("runIdTestRail") != null && System.getProperty("runTestRailId" ).equals("" )) {
                     runId = System.getProperty("runIdTestRail" );
