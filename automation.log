@@ -1,3 +1,5 @@
+import groovy.json.JsonSlurperClassic
+
 pipeline {
     agent any 
     parameters {
@@ -5,6 +7,22 @@ pipeline {
         booleanParam (name: 'executeTests', defaultValue: true, description: '')
     }
     stages {
+        stage ("Create Run TestRails") {
+           steps {
+               script{
+                    def now = new Date().format("yy/MM/dd-HH:mm")
+                    println now
+                    def response = httpRequest authentication: 'TestRail', consoleLogResponseBody: true, contentType: 'APPLICATION_JSON', httpMode: 'POST', requestBody: """{
+                        "name": "Android Run - ${now}"
+                    }""", responseHandle: 'NONE', url: 'https://gerardtest.testrail.io/index.php?/api/v2/add_run/1', wrapAsMultipart: false
+                    println('Status: '+response.status)
+                    println('Response: '+response.content)
+                    def jsonResponse = new JsonSlurperClassic().parseText(response.content)
+                    println('Json:  ' + jsonResponse)
+                    println('Run Id is: '+ jsonResponse['id'])
+               }
+           } 
+        } 
         stage ("test execution") {
             when {
                 expression {
@@ -17,22 +35,17 @@ pipeline {
                         runner1: {
                                     build job: 'RunnerAndroid',
                                     parameters: [
-                                        [$class: 'StringParameterValue', name: 'suite', value: 'src/test/resources/Mobile/gg_features/gg_cart_SCP.feature']
+                                        [$class: 'StringParameterValue', name: 'suite', value: 'src/test/resources/Mobile/gg_features/gg_cart_SCP.feature'],
+                                        [$class: 'StringParameterValue', name: 'testRailSuiteId', value: jsonResponse['id']]
                                     ]  
                         },
                         runner2: {
                                     build job: 'RunnerAndroid',
                                     parameters: [
-                                        [$class: 'StringParameterValue', name: 'suite', value: 'src/test/resources/Mobile/gg_features/gg_cart_substitutionV2.feature']
-                                    ]   
-                        },
-                        runner3: {
-                                    build job: 'RunnerAndroid',
-                                    parameters: [
-                                        [$class: 'StringParameterValue', name: 'suite', value: 'src/test/resources/Mobile/gg_features/gg_cart_global_substitutions.feature']
+                                        [$class: 'StringParameterValue', name: 'suite', value: 'src/test/resources/Mobile/gg_features/gg_cart_substitutionV2.feature'],
+                                        [$class: 'StringParameterValue', name: 'testRailSuiteId', value: jsonResponse['id']]
                                     ]   
                         }
-                     
                     )
                 }
             }
