@@ -223,11 +223,11 @@ public class HookService {
 
     @After
 
-    public void tearDown(Scenario scenario) {
+    public void tearDown(Scenario scenario) throws IOException {
         logResultToTestRail(scenario);
     }
 
-    private void logResultToTestRail(Scenario scenario) {
+    private void logResultToTestRail(Scenario scenario) throws IOException {
         String caseId = "";
         System.out.println(scenario.getSourceTagNames());
 
@@ -253,8 +253,10 @@ public class HookService {
 
         if (!caseId.equals("" )) {
             try {
+                System.out.println("Env: " + System.getenv("runIdTestRail"));
+                System.out.println("Prop: " +System.getProperty("runIdTestRail"));
 
-                if (System.getProperty("runIdTestRail" ) != null && System.getProperty("runTestRailId" ).equals("" )) {
+                if (System.getProperty("runIdTestRail") != null && System.getProperty("runTestRailId" ).equals("" )) {
                     runId = System.getProperty("runIdTestRail" );
                 }
 
