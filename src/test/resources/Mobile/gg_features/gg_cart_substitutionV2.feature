@@ -2,7 +2,7 @@ Feature: CartSubstitution(v2)
 
   #C71628
   #Author: Gerardo
-  @regression @module_substitutionV2 @start_scenario  @TestRail(3)
+  @regression @module_substitutionV2 @start_scenario  @TestRail(3) @Retest("Due bug: 1234")
   Scenario: Verify that "Confirm Substitution" & "Don't substitute" buttons are sticky at the bottom on the find substitute screen.
     Then verify substitutions buttons in search substitution page
 

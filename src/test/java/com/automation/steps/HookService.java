@@ -63,8 +63,10 @@ public class HookService {
     private static String runId = "";
     private static final int FAIL_STATE = 5;
     private static final int SUCCESS_STATE = 1;
+    private static final int RETEST_STATE = 4;
     private static final String SUCCESS_COMMENT = "This test passed";
     private static final String FAILED_COMMENT = "This test failed";
+    private String RETEST_COMMENT = "This test fails due bug";
 
     @Before("@start_scenario")
     public void before(Scenario scenario) throws IOException, APIException, com.automation.mobile.services.testrail.APIException {
@@ -230,6 +232,7 @@ public class HookService {
     private void logResultToTestRail(Scenario scenario) throws IOException {
         String caseId = "";
         System.out.println(scenario.getSourceTagNames());
+        boolean retestTag = false;
 
         for (String s : scenario.getSourceTagNames()) {
             if (s.contains("TestRail" )) {
@@ -237,18 +240,29 @@ public class HookService {
                 String[] res = s.split("(\\(.*?)" );
 
                 caseId = res[1].substring(0, res[1].length() - 1); // Removing the last parenthesis
+
+                if (s.contains("Retest")) {
+                    String[] res2 = s.split("(\".*?)" );
+                    RETEST_COMMENT = res2[2];
+                    retestTag = true;
+                }
+
             }
         }
 
         Map<String, Serializable> data = new HashMap<>();
+        if (!retestTag) {
+            if (!scenario.isFailed()) {
+                data.put("status_id", SUCCESS_STATE);
+                data.put("comment", SUCCESS_COMMENT);
 
-        if (!scenario.isFailed()) {
-            data.put("status_id", SUCCESS_STATE);
-            data.put("comment", SUCCESS_COMMENT);
-
+            } else {
+                data.put("status_id", FAIL_STATE);
+                data.put("comment", logError(scenario));
+            }
         } else {
-            data.put("status_id", FAIL_STATE);
-            data.put("comment", logError(scenario));
+            data.put("status_id", RETEST_STATE);
+            data.put("comment", RETEST_COMMENT );
         }
 
         if (!caseId.equals("" )) {

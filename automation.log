@@ -11,7 +11,6 @@ pipeline {
            steps {
                script{
                     def now = new Date().format("yy/MM/dd-HH:mm")
-                    println now
                     def response = httpRequest authentication: 'TestRail', consoleLogResponseBody: true, contentType: 'APPLICATION_JSON', httpMode: 'POST', requestBody: """{
                         "name": "Android Run - ${now}"
                     }""", responseHandle: 'NONE', url: 'https://gerardtest.testrail.io/index.php?/api/v2/add_run/1', wrapAsMultipart: false
@@ -20,9 +19,10 @@ pipeline {
                     def jsonResponse = new JsonSlurperClassic().parseText(response.content)
                     println('Json:  ' + jsonResponse)
                     println('Run Id is: '+ jsonResponse['id'])
-               }
+                    runId = jsonResponse['id'].toString()
+                    }
            } 
-        } 
+        }
         stage ("test execution") {
             when {
                 expression {
@@ -32,27 +32,37 @@ pipeline {
             steps {
                 script {
                     parallel (
+                        
                         runner1: {
                                     build job: 'RunnerAndroid',
                                     parameters: [
                                         [$class: 'StringParameterValue', name: 'suite', value: 'src/test/resources/Mobile/gg_features/gg_cart_SCP.feature'],
-                                        [$class: 'StringParameterValue', name: 'testRailSuiteId', value: jsonResponse['id']]
+                                        [$class: 'StringParameterValue', name: 'runIdTestRail', value: runId]
                                     ]  
                         },
                         runner2: {
                                     build job: 'RunnerAndroid',
                                     parameters: [
                                         [$class: 'StringParameterValue', name: 'suite', value: 'src/test/resources/Mobile/gg_features/gg_cart_substitutionV2.feature'],
-                                        [$class: 'StringParameterValue', name: 'testRailSuiteId', value: jsonResponse['id']]
+                                        [$class: 'StringParameterValue', name: 'runIdTestRail', value: runId]
                                     ]   
                         }
                     )
                 }
             }
+
         }
     } 
+    post {
+        always {
+            script {
+                def delete = httpRequest authentication: 'TestRail', contentType: 'APPLICATION_JSON', httpMode: 'POST', responseHandle: 'NONE', url: "https://gerardtest.testrail.io/index.php?/api/v2/close_run/${runId}", wrapAsMultipart: false
+                println('Status: '+delete.status)
+                println('Response: '+delete.content)
+            }
+        }
+    }
 }
-
 
 pipeline {
     agent {
@@ -62,6 +72,7 @@ pipeline {
 } 
     parameters {
         string(name: 'suite', defaultValue: 'src/test/resources/Mobile/gg_features/gg_cart_SCP.feature', description: 'Which will be executed')
+        string(name: 'runIdTestRail', defaultValue: '', description: 'testRailSuiteId to send tests')
     }
     stages {
         stage ("Download Repository") {
@@ -82,12 +93,12 @@ pipeline {
                 """
                 sh 'sleep 45'
                 sh """    
-                docker exec android\"${env.BUILD_NUMBER}\" bash -c "cd repository && mvn test -Dtest=MobileRunner -Dbanner=safeway -DmobileDevice=emulator -DmobileEnv=qa2 -Dcucumber.features=\"${params.suite}\""
+                docker exec android\"${env.BUILD_NUMBER}\" bash -c "cd repository && mvn test -DrunIdTestRail=\"${params.runIdTestRail}\" -Dtest=MobileRunner -Dbanner=safeway -DmobileDevice=emulator -DmobileEnv=qa2 -Dcucumber.features=\"${params.suite}\""
                 """
                 }
         }
     }
-        post {
+    post {
         always {
             sh """docker kill android\"${env.BUILD_NUMBER}\" """
             sh 'docker system prune -f || true'
