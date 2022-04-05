@@ -251,7 +251,7 @@ public class HookService {
         }
 
         Map<String, Serializable> data = new HashMap<>();
-        if (!retestTag) {
+  //      if (!retestTag) {
             if (!scenario.isFailed()) {
                 data.put("status_id", SUCCESS_STATE);
                 data.put("comment", SUCCESS_COMMENT);
@@ -260,11 +260,12 @@ public class HookService {
                 data.put("status_id", FAIL_STATE);
                 data.put("comment", logError(scenario));
             }
+        /*
         } else {
             data.put("status_id", RETEST_STATE);
             data.put("comment", RETEST_COMMENT );
         }
-
+*/
         if (!caseId.equals("" )) {
             try {
 
