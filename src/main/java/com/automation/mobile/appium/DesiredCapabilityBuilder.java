@@ -171,10 +171,10 @@ public class DesiredCapabilityBuilder {
 
 //		dc.setCapability(MobileCapabilityType.UDID, ad.getConfigureData(MobileConfType.UDID));
 //		dc.setCapability(MobileCapabilityType.APPLICATION_NAME, ad.getConfigureData(MobileConfType.APPLICATION_NAME));
-        if (System.getProperty("simulatorID") != null || !System.getProperty("simulatorID").equals("" )) {
-            dc.setCapability(MobileCapabilityType.DEVICE_NAME, System.getProperty("simulatorID"));
-        } else {
+     	if (System.getProperty("simulatorID") == null) {
             dc.setCapability(MobileCapabilityType.DEVICE_NAME, ad.getConfigureData(MobileConfType.DEVICE_NAME));
+        } else {
+            dc.setCapability(MobileCapabilityType.DEVICE_NAME, System.getProperty("simulatorID"));
         }
         dc.setCapability(MobileCapabilityType.PLATFORM_NAME, ad.getConfigureData(MobileConfType.PLATFORM_NAME));
         dc.setCapability(MobileCapabilityType.PLATFORM_VERSION, ad.getConfigureData(MobileConfType.PLATFORM_VERSION));
@@ -228,12 +228,12 @@ public class DesiredCapabilityBuilder {
         } else {
             //local device install app
             dc.setCapability("wdaLocalPort", ad.getWdaLocalPort());
-            if (System.getProperty("simulatorID") != null || !System.getProperty("simulatorID").equals("" )) {
-                dc.setCapability(MobileCapabilityType.UDID, System.getProperty("simulatorID"));
-                dc.setCapability(MobileCapabilityType.APPLICATION_NAME, System.getProperty("simulatorID"));
-            } else {
+            if (System.getProperty("simulatorID") == null ) {
                 dc.setCapability(MobileCapabilityType.UDID, ad.getConfigureData(MobileConfType.UDID));
                 dc.setCapability(MobileCapabilityType.APPLICATION_NAME, ad.getConfigureData(MobileConfType.APPLICATION_NAME));
+            } else {
+                dc.setCapability(MobileCapabilityType.UDID, System.getProperty("simulatorID"));
+                dc.setCapability(MobileCapabilityType.APPLICATION_NAME, System.getProperty("simulatorID"));
             }
             dc.setCapability(MobileCapabilityType.APP, appPath);
             if (platform.contains("android")) {
