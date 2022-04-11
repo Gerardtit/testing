@@ -271,10 +271,9 @@ public class HookService {
 
                 if (System.getProperty("runIdTestRail") != null) {
                     runId = System.getProperty("runIdTestRail" );
-                }
-
-                client = testRailApiClient();
-                client.sendPost("add_result_for_case/" + runId + "/" + caseId, data);
+                    client = testRailApiClient();
+                    client.sendPost("add_result_for_case/" + runId + "/" + caseId, data);
+                }        
             } catch (IOException | APIException e) {
                 e.printStackTrace();
             }
