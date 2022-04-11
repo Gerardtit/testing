@@ -269,7 +269,7 @@ public class HookService {
         if (!caseId.equals("" )) {
             try {
 
-                if (System.getProperty("runIdTestRail") != null || !System.getProperty("runTestRailId" ).equals("" )) {
+                if (System.getProperty("runIdTestRail") != null) {
                     runId = System.getProperty("runIdTestRail" );
                 }
 
