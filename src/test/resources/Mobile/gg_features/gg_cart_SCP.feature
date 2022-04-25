@@ -19,6 +19,6 @@ Feature: SCP
 
   #C74323
   #Author:Rohith missing prod
-  @regression @module_SCP @TestRail(96)
+  @regression @module_SCP @TestRail(5)
   Scenario: Login
     Then validate 1 equals 1
