@@ -1,0 +1,75 @@
+Parallel Runner
+
+Este job tiene 2 parametros en This project is parameterized
+String / banner / safeway
+Boolean / executeTests / set by default
+
+Por otro lado el main branch viene de https://github.com/Gerardtit/testing.git
+Donde debe leer el jenkins file
+Es un multibranch pipeline
+
+import groovy.json.JsonSlurperClassic
+
+pipeline {
+    agent any 
+    parameters {
+        string(name: 'banner', defaultValue: 'safeway', description: 'Which banner will be tested')
+        booleanParam (name: 'executeTests', defaultValue: true, description: '')
+    }
+    stages {
+        stage ("Create Run TestRails") {
+           steps {
+               script{
+                    def now = new Date().format("yy/MM/dd-HH:mm")
+                    def response = httpRequest authentication: 'TestRail2', consoleLogResponseBody: true, contentType: 'APPLICATION_JSON', httpMode: 'POST', requestBody: """{
+                    	"name": "Android Run - ${now}"
+                    }""", responseHandle: 'NONE', url: 'https://gerardtit.testrail.io/index.php?/api/v2/add_run/1', wrapAsMultipart: false
+                    println('Status: '+response.status)
+                    println('Response: '+response.content)
+                    def jsonResponse = new JsonSlurperClassic().parseText(response.content)
+                    println('Json:  ' + jsonResponse)
+                    println('Run Id is: '+ jsonResponse['id'])
+                    runId = jsonResponse['id'].toString()
+                    }
+           } 
+        }
+        stage ("test execution") {
+            when {
+                expression {
+                   params.executeTests
+                }
+            }
+            steps {
+                script {
+                    parallel (
+                        
+                        runner1: {
+                                    build job: 'RunnerAndroid',
+                                    parameters: [
+                                        [$class: 'StringParameterValue', name: 'suite', value: 'src/test/resources/Mobile/gg_features/gg_cart_SCP.feature'],
+                                        [$class: 'StringParameterValue', name: 'runIdTestRail', value: runId]
+                                    ]  
+                        },
+                        runner2: {
+                                    build job: 'RunnerAndroid',
+                                    parameters: [
+                                        [$class: 'StringParameterValue', name: 'suite', value: 'src/test/resources/Mobile/gg_features/gg_cart_substitutionV2.feature'],
+                                        [$class: 'StringParameterValue', name: 'runIdTestRail', value: runId]
+                                    ]   
+                        }
+                    )
+                }
+            }
+
+        }
+    } 
+    post {
+        always {
+            script {
+                def delete = httpRequest authentication: 'TestRail2', contentType: 'APPLICATION_JSON', httpMode: 'POST', responseHandle: 'NONE', url: "https://gerardtit.testrail.io/index.php?/api/v2/close_run/${runId}", wrapAsMultipart: false
+                println('Status: '+delete.status)
+                println('Response: '+delete.content)
+            }
+        }
+    }
+}

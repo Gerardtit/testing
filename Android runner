@@ -1,0 +1,48 @@
+Android runner
+
+Este job tiene 2 parametros en This project is parameterized
+String / suite / src/test/resources/Mobile/gg_features/gg_cart_SCP.feature
+String / runIdTestRail / set by default
+
+
+pipeline {
+    agent {
+   node { 
+      label 'docker'
+   }
+} 
+    parameters {
+        string(name: 'suite', defaultValue: 'src/test/resources/Mobile/gg_features/gg_cart_SCP.feature', description: 'Which will be executed')
+        string(name: 'runIdTestRail', defaultValue: '', description: 'testRailSuiteId to send tests')
+    }
+    stages {
+        stage ("Download Repository") {
+            steps {
+                git branch: 'main', credentialsId: 'GitHub', url: 'https://github.com/Gerardtit/testing.git'
+            }
+        }
+        stage ("Execute tests") {
+            steps {
+                
+                sh """
+                    docker run --privileged -d \
+                    -v \"${WORKSPACE}\":/root/repository/ \
+                    -v /home/gerard/Documents/Apps/:/root/repository/src/test/resources/Apps/android/qa2/ \
+                    -e DEVICE="Samsung Galaxy S10" \
+                    -e EMULATOR_ARGS="-wipe-data -partition-size 1024" \
+                    --name android\"${env.BUILD_NUMBER}\" test
+                """
+                sh 'sleep 45'
+                sh """    
+                docker exec android\"${env.BUILD_NUMBER}\" bash -c "cd repository && mvn test -DrunIdTestRail=\"${params.runIdTestRail}\" -Dtest=MobileRunner -Dbanner=safeway -DmobileDevice=emulator -DmobileEnv=qa2 -Dcucumber.features=\"${params.suite}\""
+                """
+                }
+        }
+    }
+    post {
+        always {
+            sh """docker kill android\"${env.BUILD_NUMBER}\" """
+            sh 'docker system prune -f || true'
+        }
+    }
+}
